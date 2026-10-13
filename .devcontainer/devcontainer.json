@@ -1,0 +1,36 @@
+{
+  "name": "GreenPoints",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+
+  "forwardPorts": [8000, 5173, 3306, 8080],
+  "portsAttributes": {
+    "8000": { "label": "Laravel API (php artisan serve)", "onAutoForward": "notify" },
+    "5173": { "label": "React / Vite dev server", "onAutoForward": "openBrowser" },
+    "3306": { "label": "MySQL" },
+    "8080": { "label": "phpMyAdmin", "onAutoForward": "silent" }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "onecentlin.laravel-blade",
+        "ryannaddy.laravel-artisan",
+        "mikestead.dotenv",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "xdebug.php-debug"
+      ],
+      "settings": {
+        "php.validate.executablePath": "/usr/local/bin/php"
+      }
+    }
+  },
+
+  "postCreateCommand": "if [ -f composer.json ]; then composer install; fi",
+
+  "remoteUser": "vscode"
+}
