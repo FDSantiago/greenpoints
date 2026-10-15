@@ -6,6 +6,9 @@ use App\Http\Resources\WasteSubmissionResource;
 use App\Models\PointTransaction;
 use App\Models\User;
 use App\Models\WasteLog;
+use App\Notifications\Notifier;
+use App\Notifications\PointsAwarded;
+use App\Notifications\SubmissionRejected;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -103,7 +106,7 @@ class WasteSubmissionService
      *
      * @param  array<int, array{id:int, weight_kg?:numeric, waste_condition?:string}>  $overrides
      */
-    public function verify(string $submissionId, User $staff, array $overrides = []): Collection
+    private function runVerify(string $submissionId, User $staff, array $overrides = []): Collection
     {
         return DB::transaction(function () use ($submissionId, $staff, $overrides) {
             $logs = $this->lockPending($submissionId, $staff);
@@ -149,7 +152,7 @@ class WasteSubmissionService
         });
     }
 
-    public function reject(string $submissionId, User $staff, string $reason): Collection
+    private function runReject(string $submissionId, User $staff, string $reason): Collection
     {
         return DB::transaction(function () use ($submissionId, $staff, $reason) {
             $logs = $this->lockPending($submissionId, $staff);
@@ -165,6 +168,30 @@ class WasteSubmissionService
 
             return $logs->load('user.group');
         });
+    }
+
+    /** Verifies the whole submission, then (once committed) tells the student how many points they got. */
+    public function verify(string $submissionId, User $staff, array $overrides = []): Collection
+    {
+        $logs = $this->runVerify($submissionId, $staff, $overrides);
+
+        Notifier::send($logs->first()->user, new PointsAwarded(
+            (int) $logs->sum('points_awarded'),
+            round((float) $logs->sum('weight_kg'), 3),
+            $submissionId,
+        ));
+
+        return $logs;
+    }
+
+    /** Rejects the whole submission, then (once committed) tells the student why. */
+    public function reject(string $submissionId, User $staff, string $reason): Collection
+    {
+        $logs = $this->runReject($submissionId, $staff, $reason);
+
+        Notifier::send($logs->first()->user, new SubmissionRejected($reason, $submissionId));
+
+        return $logs;
     }
 
     /** Locks the submission's rows and checks it can still be processed by this staff member. */

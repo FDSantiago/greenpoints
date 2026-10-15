@@ -6,6 +6,10 @@ use App\Models\PointTransaction;
 use App\Models\Redemption;
 use App\Models\Reward;
 use App\Models\User;
+use App\Notifications\Notifier;
+use App\Notifications\RedemptionCancelled;
+use App\Notifications\RedemptionClaimed;
+use App\Notifications\RedemptionReady;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -85,7 +89,7 @@ class RedemptionService
     }
 
     /** Owner may cancel while pending; staff may cancel pending or ready. Refunds the points. */
-    public function cancel(int $redemptionId, User $actor): Redemption
+    private function runCancel(int $redemptionId, User $actor): Redemption
     {
         return DB::transaction(function () use ($redemptionId, $actor) {
             $redemption = Redemption::with(['reward', 'user.group'])->lockForUpdate()->find($redemptionId);
@@ -121,21 +125,53 @@ class RedemptionService
         });
     }
 
+    /** Cancels (see runCancel). When STAFF cancel someone else's redemption, that student is notified. */
+    public function cancel(int $redemptionId, User $actor): Redemption
+    {
+        $redemption = $this->runCancel($redemptionId, $actor);
+
+        if ($redemption->user_id !== $actor->id) {
+            Notifier::send($redemption->user, new RedemptionCancelled(
+                $redemption->reward?->name ?? 'Your reward',
+                (int) $redemption->points_spent,
+                $redemption->id,
+            ));
+        }
+
+        return $redemption;
+    }
+
     /** Staff: pending -> ready (student is told to come and collect). */
     public function markReady(int $redemptionId, User $staff): Redemption
     {
-        return $this->transition($redemptionId, $staff, [Redemption::STATUS_PENDING], Redemption::STATUS_READY);
+        $redemption = $this->transition($redemptionId, $staff, [Redemption::STATUS_PENDING], Redemption::STATUS_READY);
+
+        Notifier::send($redemption->user, new RedemptionReady(
+            $redemption->reward?->name ?? 'Your reward',
+            $redemption->redemption_code,
+            (string) config('greenpoints.pickup.location'),
+            $redemption->id,
+        ));
+
+        return $redemption;
     }
 
     /** Staff: pending|ready -> claimed (handed over at the desk). */
     public function claim(int $redemptionId, User $staff): Redemption
     {
-        return $this->transition(
+        $redemption = $this->transition(
             $redemptionId,
             $staff,
             [Redemption::STATUS_PENDING, Redemption::STATUS_READY],
             Redemption::STATUS_CLAIMED
         );
+
+        Notifier::send($redemption->user, new RedemptionClaimed(
+            $redemption->reward?->name ?? 'Your reward',
+            $redemption->id,
+        ));
+
+        return $redemption;
     }
 
     private function transition(int $redemptionId, User $staff, array $from, string $to): Redemption

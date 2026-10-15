@@ -62,6 +62,7 @@ class DashboardController extends Controller
                 'period' => 'weekly',
             ],
             'pending_submissions' => $pendingCount,
+            'unread_notifications' => $user->unreadNotifications()->count(),
             'recent_submissions' => $recent,
             'active_redemptions' => $activeRedemptions->values(),
         ]]);

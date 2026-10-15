@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Admin\WasteCategoryController as AdminWasteCateg
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\LeaderboardController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\RedemptionController;
 use App\Http\Controllers\Api\V1\RewardController;
 use App\Http\Controllers\Api\V1\Staff\RedemptionController as StaffRedemptionController;
@@ -52,6 +53,13 @@ Route::prefix('v1')->group(function () {
 
         // Leaderboard
         Route::get('leaderboard', [LeaderboardController::class, 'index']);
+
+        // Notifications (static paths first)
+        Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::post('notifications/{notificationId}/read', [NotificationController::class, 'markRead'])->whereUuid('notificationId');
+        Route::delete('notifications/{notificationId}', [NotificationController::class, 'destroy'])->whereUuid('notificationId');
 
         // Staff / admin only
         Route::middleware(EnsureStaff::class)->prefix('staff')->group(function () {

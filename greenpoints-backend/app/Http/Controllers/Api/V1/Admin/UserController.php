@@ -7,6 +7,8 @@ use App\Http\Resources\AdminUserResource;
 use App\Http\Resources\PointTransactionResource;
 use App\Models\PointTransaction;
 use App\Models\User;
+use App\Notifications\Notifier;
+use App\Notifications\PointsAdjusted;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -202,6 +204,8 @@ class UserController extends Controller
 
             return [$transaction, $balance + $data['points']];
         });
+
+        Notifier::send(User::find($userId), new PointsAdjusted($data['points'], $data['note'], $balance));
 
         return response()->json([
             'data' => (new PointTransactionResource($transaction))->resolve(),
