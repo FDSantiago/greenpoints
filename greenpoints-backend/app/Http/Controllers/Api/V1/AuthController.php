@@ -17,7 +17,8 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): JsonResponse
     {
         // Self-registration always creates a student: `role` is not mass-assignable.
-        $user = User::create($request->validated());
+        // refresh() loads the DB defaults (role = student, is_active = true) into the model.
+        $user = User::create($request->validated())->refresh();
 
         return response()->json([
             'token' => $user->createToken('api')->plainTextToken,
@@ -34,6 +35,9 @@ class AuthController extends Controller
                 'email' => ['These credentials do not match our records.'],
             ]);
         }
+
+        // Checked after the password so disabled accounts can't be discovered without it.
+        abort_if($user->is_active !== null && ! $user->is_active, 403, 'This account has been deactivated. Please contact an administrator.');
 
         $deviceName = $request->validated('device_name') ?? 'api';
 

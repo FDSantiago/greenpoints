@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\GroupController as AdminGroupController;
+use App\Http\Controllers\Api\V1\Admin\ImpactReportController as AdminImpactReportController;
+use App\Http\Controllers\Api\V1\Admin\RewardController as AdminRewardController;
+use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Api\V1\Admin\WasteCategoryController as AdminWasteCategoryController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\LeaderboardController;
@@ -10,6 +15,7 @@ use App\Http\Controllers\Api\V1\Staff\SubmissionController as StaffSubmissionCon
 use App\Http\Controllers\Api\V1\WalletController;
 use App\Http\Controllers\Api\V1\WasteCategoryController;
 use App\Http\Controllers\Api\V1\WasteSubmissionController;
+use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureStaff;
 use Illuminate\Support\Facades\Route;
 
@@ -56,6 +62,40 @@ Route::prefix('v1')->group(function () {
             Route::get('redemptions', [StaffRedemptionController::class, 'index']);
             Route::post('redemptions/{redemptionId}/ready', [StaffRedemptionController::class, 'ready'])->whereNumber('redemptionId');
             Route::post('redemptions/{redemptionId}/claim', [StaffRedemptionController::class, 'claim'])->whereNumber('redemptionId');
+        });
+
+        // Admin only
+        Route::middleware(EnsureAdmin::class)->prefix('admin')->group(function () {
+            Route::get('users', [AdminUserController::class, 'index']);
+            Route::post('users', [AdminUserController::class, 'store']);
+            Route::get('users/{userId}', [AdminUserController::class, 'show'])->whereNumber('userId');
+            Route::patch('users/{userId}', [AdminUserController::class, 'update'])->whereNumber('userId');
+            Route::delete('users/{userId}', [AdminUserController::class, 'destroy'])->whereNumber('userId');
+            Route::get('users/{userId}/transactions', [AdminUserController::class, 'transactions'])->whereNumber('userId');
+            Route::post('users/{userId}/points-adjustments', [AdminUserController::class, 'adjustPoints'])->whereNumber('userId');
+
+            Route::get('groups', [AdminGroupController::class, 'index']);
+            Route::post('groups', [AdminGroupController::class, 'store']);
+            Route::get('groups/{groupId}', [AdminGroupController::class, 'show'])->whereNumber('groupId');
+            Route::patch('groups/{groupId}', [AdminGroupController::class, 'update'])->whereNumber('groupId');
+            Route::delete('groups/{groupId}', [AdminGroupController::class, 'destroy'])->whereNumber('groupId');
+
+            Route::get('waste-categories', [AdminWasteCategoryController::class, 'index']);
+            Route::post('waste-categories', [AdminWasteCategoryController::class, 'store']);
+            Route::get('waste-categories/{categoryId}', [AdminWasteCategoryController::class, 'show'])->whereNumber('categoryId');
+            Route::patch('waste-categories/{categoryId}', [AdminWasteCategoryController::class, 'update'])->whereNumber('categoryId');
+            Route::delete('waste-categories/{categoryId}', [AdminWasteCategoryController::class, 'destroy'])->whereNumber('categoryId');
+
+            Route::get('rewards', [AdminRewardController::class, 'index']);
+            Route::post('rewards', [AdminRewardController::class, 'store']);
+            Route::get('rewards/{rewardId}', [AdminRewardController::class, 'show'])->whereNumber('rewardId');
+            Route::patch('rewards/{rewardId}', [AdminRewardController::class, 'update'])->whereNumber('rewardId');
+            Route::delete('rewards/{rewardId}', [AdminRewardController::class, 'destroy'])->whereNumber('rewardId');
+
+            Route::get('reports/impact', [AdminImpactReportController::class, 'show']);
+            Route::post('reports/impact/generate', [AdminImpactReportController::class, 'generate']);
+            Route::get('reports/impact/history', [AdminImpactReportController::class, 'history']);
+            Route::get('reports/impact/export', [AdminImpactReportController::class, 'export']);
         });
     });
 });
