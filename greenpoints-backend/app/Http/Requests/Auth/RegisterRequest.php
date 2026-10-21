@@ -12,6 +12,14 @@ class RegisterRequest extends FormRequest
         return true;
     }
 
+    /** Oracle string comparison is case-sensitive, so e-mails are always stored and looked up in lower case. */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('email')) {
+            $this->merge(['email' => mb_strtolower(trim((string) $this->input('email')))]);
+        }
+    }
+
     public function rules(): array
     {
         return [

@@ -1,3 +1,14 @@
+# Oracle Database 19c from Oracle's container registry.
+# ONE-TIME SETUP on your computer (not inside the container):
+#   1. Create a free Oracle account and accept the license for "Database > enterprise" at
+#      https://container-registry.oracle.com
+#   2. docker login container-registry.oracle.com
+# The first start creates the database and takes 10-45 minutes. Watch it with:
+#   docker compose -f .devcontainer/docker-compose.yml logs -f oracle     (wait for "DATABASE IS READY TO USE!")
+#
+# Using a 19c server your school gives you instead? Delete the `oracle` service and `depends_on`,
+# then set DB_HOST / DB_SERVICE_NAME / DB_USERNAME / DB_PASSWORD below to your server's values.
+
 services:
   app:
     build:
@@ -7,47 +18,41 @@ services:
       - ../:/workspace:cached
     command: sleep infinity
     depends_on:
-      db:
+      oracle:
         condition: service_healthy
     environment:
-      DB_CONNECTION: mysql
-      DB_HOST: db
-      DB_PORT: "3306"
-      DB_DATABASE: greenpoints
-      DB_USERNAME: root
-      DB_PASSWORD: root
+      DB_CONNECTION: oracle
+      DB_HOST: oracle
+      DB_PORT: "1521"
+      DB_SERVICE_NAME: ORCLPDB1
+      DB_DATABASE: ORCLPDB1
+      DB_USERNAME: gp_owner
+      DB_PASSWORD: GpOwner_Dev1
+      DB_CHARSET: AL32UTF8
+      DB_SERVER_VERSION: 19c
+      ORA_MAX_NAME_LEN: "128"
 
-  db:
-    image: mysql:8.0
+  oracle:
+    image: container-registry.oracle.com/database/enterprise:19.3.0.0
+    # Built it yourself from github.com/oracle/docker-images instead? Use: image: oracle/database:19.3.0-ee
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: greenpoints
-      MYSQL_USER: greenpoints
-      MYSQL_PASSWORD: greenpoints
+      ORACLE_SID: ORCLCDB
+      ORACLE_PDB: ORCLPDB1
+      ORACLE_PWD: Oracle_Dev_1          # password of SYS, SYSTEM and PDBADMIN (dev only!)
+      ORACLE_CHARACTERSET: AL32UTF8
     ports:
-      - "3306:3306"
+      - "1521:1521"
+      - "5500:5500"                      # EM Express
+    shm_size: 1g
     volumes:
-      - db-data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
+      - oracle-data:/opt/oracle/oradata
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
-  phpmyadmin:
-    image: phpmyadmin:latest
-    restart: unless-stopped
-    environment:
-      PMA_HOST: db
-      PMA_USER: root
-      PMA_PASSWORD: root
-    ports:
-      - "8080:80"
-    depends_on:
-      db:
-        condition: service_healthy
+      test: ["CMD", "/opt/oracle/checkDBStatus.sh"]
+      interval: 20s
+      timeout: 10s
+      retries: 120
+      start_period: 5m
 
 volumes:
-  db-data:
+  oracle-data:

@@ -29,7 +29,7 @@ class RedemptionService
     public function redeem(User $user, int $rewardId, ?string $idempotencyKey): array
     {
         return DB::transaction(function () use ($user, $rewardId, $idempotencyKey) {
-            User::whereKey($user->id)->lockForUpdate()->first();
+            User::whereKey($user->id)->lockForUpdate()->get(); // no row limit: Oracle forbids FOR UPDATE + FETCH FIRST
 
             if ($idempotencyKey !== null) {
                 $existing = Redemption::with('reward')
@@ -48,7 +48,7 @@ class RedemptionService
                 }
             }
 
-            $reward = Reward::whereKey($rewardId)->lockForUpdate()->first();
+            $reward = Reward::whereKey($rewardId)->lockForUpdate()->get()->first();
             abort_if(! $reward || ! $reward->is_active, 404, 'Reward not found.');
             abort_if($reward->stock_qty < 1, 409, 'This reward is out of stock.');
 
@@ -67,7 +67,7 @@ class RedemptionService
                 'points_spent' => $cost,
                 'status' => Redemption::STATUS_PENDING,
                 'redemption_code' => $this->newCode(),
-                'idempotency_key' => $idempotencyKey,
+                'idempotency_key' => $idempotencyKey ?? 'auto-'.\Illuminate\Support\Str::uuid(),
                 'redeemed_at' => now(),
             ]);
 
@@ -92,7 +92,7 @@ class RedemptionService
     private function runCancel(int $redemptionId, User $actor): Redemption
     {
         return DB::transaction(function () use ($redemptionId, $actor) {
-            $redemption = Redemption::with(['reward', 'user.group'])->lockForUpdate()->find($redemptionId);
+            $redemption = Redemption::with(['reward', 'user.group'])->whereKey($redemptionId)->lockForUpdate()->get()->first();
 
             // 404 for strangers so ids can't be probed.
             abort_if(! $redemption || (! $actor->isStaff() && $redemption->user_id !== $actor->id), 404);
@@ -177,7 +177,7 @@ class RedemptionService
     private function transition(int $redemptionId, User $staff, array $from, string $to): Redemption
     {
         return DB::transaction(function () use ($redemptionId, $staff, $from, $to) {
-            $redemption = Redemption::with(['reward', 'user.group'])->lockForUpdate()->find($redemptionId);
+            $redemption = Redemption::with(['reward', 'user.group'])->whereKey($redemptionId)->lockForUpdate()->get()->first();
 
             abort_if(! $redemption, 404);
             abort_if($redemption->user_id === $staff->id, 403, 'You cannot process your own redemption.');

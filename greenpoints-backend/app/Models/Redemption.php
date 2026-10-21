@@ -19,6 +19,9 @@ class Redemption extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
+            'reward_id' => 'integer',
+            'fulfilled_by' => 'integer',
             'points_spent' => 'integer',
             'redeemed_at' => 'datetime',
             'fulfilled_at' => 'datetime',
