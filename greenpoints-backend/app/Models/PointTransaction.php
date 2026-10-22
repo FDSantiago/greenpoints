@@ -30,9 +30,6 @@ class PointTransaction extends Model
     protected function casts(): array
     {
         return [
-            'user_id' => 'integer',
-            'waste_log_id' => 'integer',
-            'redemption_id' => 'integer',
             'points' => 'integer',
         ];
     }

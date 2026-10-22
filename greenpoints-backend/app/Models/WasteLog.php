@@ -28,10 +28,6 @@ class WasteLog extends Model
     protected function casts(): array
     {
         return [
-            'user_id' => 'integer',
-            'category_id' => 'integer',
-            'verified_by' => 'integer',
-            'points_awarded' => 'integer',
             'weight_kg' => 'decimal:3',
             'contamination_factor' => 'decimal:2',
             'dropped_at' => 'datetime',

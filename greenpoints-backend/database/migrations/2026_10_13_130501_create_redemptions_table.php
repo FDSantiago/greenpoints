@@ -11,8 +11,8 @@ return new class extends Migration
     {
         Schema::create('redemptions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained();
-            $table->foreignId('reward_id')->constrained();
+            $table->foreignId('user_id')->constrained()->restrictOnDelete();
+            $table->foreignId('reward_id')->constrained()->restrictOnDelete();
             $table->unsignedInteger('points_spent');                 // snapshot of cost at redemption
             $table->string('status', 20)->default('pending');        // pending | ready | claimed | cancelled
             $table->string('redemption_code', 16)->unique();

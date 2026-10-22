@@ -12,10 +12,10 @@ return new class extends Migration
         // Append-only ledger: balance = SUM(points) per user. Never UPDATE or DELETE rows.
         Schema::create('point_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained();
+            $table->foreignId('user_id')->constrained()->restrictOnDelete();
             // RESTRICT (not SET NULL/CASCADE) because MySQL forbids those on columns used in a CHECK.
-            $table->foreignId('waste_log_id')->nullable()->constrained('waste_logs');
-            $table->foreignId('redemption_id')->nullable()->constrained('redemptions');
+            $table->foreignId('waste_log_id')->nullable()->constrained('waste_logs')->restrictOnDelete();
+            $table->foreignId('redemption_id')->nullable()->constrained('redemptions')->restrictOnDelete();
             $table->string('type', 20);                // earn | redeem | adjustment | refund
             $table->integer('points');                 // signed: + earn/refund, - redeem
             $table->string('note')->nullable();

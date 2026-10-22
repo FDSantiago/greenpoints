@@ -49,10 +49,8 @@ class UserController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
         if (! empty($filters['q'])) {
-            // Oracle's LIKE is case-sensitive, so compare upper-cased values (ESCAPE protects % and _).
-            $like = '%'.mb_strtoupper(addcslashes($filters['q'], '%_\\')).'%';
-            $query->where(fn ($q) => $q->whereRaw("UPPER(name) LIKE ? ESCAPE '\\'", [$like])
-                ->orWhereRaw("UPPER(email) LIKE ? ESCAPE '\\'", [$like]));
+            $like = '%'.addcslashes($filters['q'], '%_\\').'%';
+            $query->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('email', 'like', $like));
         }
 
         $page = $query->paginate((int) ($filters['per_page'] ?? 20));
@@ -64,8 +62,6 @@ class UserController extends Controller
     /** POST /admin/users */
     public function store(Request $request): JsonResponse
     {
-        $this->normalizeEmail($request);
-
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
@@ -96,7 +92,6 @@ class UserController extends Controller
     public function update(Request $request, int $userId): JsonResponse
     {
         $user = User::findOrFail($userId);
-        $this->normalizeEmail($request);
 
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -190,7 +185,7 @@ class UserController extends Controller
         $admin = $request->user();
 
         [$transaction, $balance] = DB::transaction(function () use ($userId, $data, $admin) {
-            $user = User::whereKey($userId)->lockForUpdate()->get()->first();
+            $user = User::whereKey($userId)->lockForUpdate()->first();
             abort_if(! $user, 404);
 
             $balance = (int) PointTransaction::where('user_id', $user->id)->sum('points');
@@ -216,13 +211,5 @@ class UserController extends Controller
             'data' => (new PointTransactionResource($transaction))->resolve(),
             'balance' => $balance,
         ], 201);
-    }
-
-    /** Oracle string comparison is case-sensitive, so e-mails are always stored in lower case. */
-    private function normalizeEmail(Request $request): void
-    {
-        if ($request->has('email')) {
-            $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
-        }
     }
 }

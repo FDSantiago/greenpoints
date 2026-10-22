@@ -12,8 +12,8 @@ return new class extends Migration
         Schema::create('waste_logs', function (Blueprint $table) {
             $table->id();
             $table->uuid('submission_id')->index();   // groups items from one drop-off
-            $table->foreignId('user_id')->constrained();
-            $table->foreignId('category_id')->constrained('waste_categories');
+            $table->foreignId('user_id')->constrained()->restrictOnDelete();
+            $table->foreignId('category_id')->constrained('waste_categories')->restrictOnDelete();
             $table->decimal('weight_kg', 8, 3);
             $table->string('waste_condition', 20)->default('clean');      // clean | contaminated
             $table->decimal('contamination_factor', 3, 2)->default(1.00); // multiplier snapshot
