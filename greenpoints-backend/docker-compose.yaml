@@ -12,6 +12,9 @@ services:
       - .:/var/www/html
     ports:
       - "8000:8000"
+    environment:
+      # Each open notifications stream (one per browser tab) holds a worker, so keep plenty.
+      PHP_CLI_SERVER_WORKERS: ${PHP_CLI_SERVER_WORKERS:-16}
     command: >
       sh -c "composer install --no-interaction &&
              php artisan serve --host=0.0.0.0 --port=8000 --no-reload"

@@ -50,3 +50,50 @@ export async function api(path, { method = 'GET', body, params, headers = {}, bl
   if (res.status === 204) return null; // DELETE responses have no body
   return blob ? res.blob() : res.json();
 }
+
+// Read a server-sent events stream. EventSource can't send our Bearer token, so this uses fetch
+// and parses the text/event-stream body itself. Calls onEvent({ event, data, id }) per message
+// (data is parsed JSON) and resolves when the server closes the stream; abort it with `signal`.
+export async function stream(path, { onEvent, onRetry, lastEventId, signal } = {}) {
+  const token = getToken();
+  const res = await fetch(new URL(BASE + path, window.location.origin), {
+    headers: {
+      Accept: 'text/event-stream',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(lastEventId ? { 'Last-Event-ID': lastEventId } : {}),
+    },
+    signal,
+  });
+
+  if (res.status === 401 && token) {
+    setToken(null);
+    window.dispatchEvent(new Event('gp:unauthorized'));
+  }
+  if (!res.ok) throw new ApiError(res.status, null);
+
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buffer += value.replace(/\r\n?/g, '\n');
+
+    // Messages are separated by a blank line; keep the trailing partial one for the next chunk.
+    const blocks = buffer.split('\n\n');
+    buffer = blocks.pop();
+    for (const block of blocks) {
+      const msg = { event: 'message', data: '', id: null };
+      for (const line of block.split('\n')) {
+        if (!line || line.startsWith(':')) continue; // ": ping" keep-alives
+        const i = line.indexOf(':');
+        const field = i === -1 ? line : line.slice(0, i);
+        const val = i === -1 ? '' : line.slice(i + 1).replace(/^ /, '');
+        if (field === 'data') msg.data += (msg.data ? '\n' : '') + val;
+        else if (field === 'event') msg.event = val;
+        else if (field === 'id') msg.id = val;
+        else if (field === 'retry' && /^\d+$/.test(val)) onRetry?.(Number(val));
+      }
+      if (msg.data) onEvent?.({ ...msg, data: JSON.parse(msg.data) });
+    }
+  }
+}

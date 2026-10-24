@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
-import { api } from '../lib/api.js';
+import { useNotifications } from '../auth/NotificationsContext.jsx';
 
 // [path, label, emoji for the phone tab bar]
 const NAV = {
@@ -14,17 +14,10 @@ const MENU_EXTRA = [['/impact', 'My impact'], ['/pickups', 'My reward pickups']]
 export default function Layout() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const [unread, setUnread] = useState(0);
+  // Bell badge and pop-up come live from the notifications stream.
+  const { unread, toast, dismissToast } = useNotifications();
+  const { pathname } = useLocation();
   const items = NAV[user.role] || NAV.student;
-
-  // Poll the unread count for the bell badge (cheap endpoint).
-  useEffect(() => {
-    let off = false;
-    const load = () => api('/notifications/unread-count').then((r) => !off && setUnread(r.data.unread)).catch(() => {});
-    load();
-    const t = setInterval(load, 45000);
-    return () => { off = true; clearInterval(t); };
-  }, []);
 
   const link = ([to, label]) => (
     <NavLink key={to} to={to} end={to === '/' || to === '/admin'} className={({ isActive }) => (isActive ? 'active' : '')}>{label}</NavLink>
@@ -55,6 +48,11 @@ export default function Layout() {
         </div>
       </header>
       <main className="page"><Outlet /></main>
+      {toast && pathname !== '/alerts' && (
+        <Link to="/alerts" className={`note ${toast.style} toast`} role="status" onClick={dismissToast}>
+          <div style={{ flex: 1 }}><b>{toast.title}</b><span className="small">{toast.body}</span></div>
+        </Link>
+      )}
       <nav className="tabbar" aria-label="Main">
         {items.map(([to, label, emoji]) => (
           <NavLink key={to} to={to} end={to === '/' || to === '/admin'} className={({ isActive }) => (isActive ? 'active' : '')}><span>{emoji}</span>{label}</NavLink>

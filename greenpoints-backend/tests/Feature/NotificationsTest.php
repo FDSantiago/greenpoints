@@ -3,6 +3,8 @@
 use App\Models\Reward;
 use App\Models\User;
 use App\Models\WasteCategory;
+use App\Notifications\PointsAdjusted;
+use Illuminate\Support\Sleep;
 
 beforeEach(fn () => $this->seed());
 
@@ -150,4 +152,50 @@ it('covers notification creation, ownership, reading, and bulk actions', functio
     apiRequest($this, 'DELETE', "/notifications/{$victim}", $student)->assertNoContent();
     expect($list($student)['total'])->toBe(7)
         ->and($list($other)['total'])->toBe(0);
+});
+
+it('streams new notifications and unread counts as server-sent events', function () {
+    Sleep::fake();
+    config(['greenpoints.notification_stream.lifetime' => 0]); // one pass, then close
+    $student = userWithRole(User::ROLE_STUDENT);
+    $other = userWithRole(User::ROLE_STUDENT);
+    $stream = function (User $user, array $headers = []) {
+        $response = apiRequest($this, 'GET', '/notifications/stream', $user, [], $headers)->assertOk();
+        expect($response->headers->get('Content-Type'))->toStartWith('text/event-stream');
+
+        return $response->streamedContent();
+    };
+
+    apiRequest($this, 'GET', '/notifications/stream')->assertUnauthorized();
+
+    // No notifications yet: the cursor is the nil UUID, so anything created later counts as new.
+    $nil = '00000000-0000-0000-0000-000000000000';
+    $content = $stream($student);
+    expect($content)->toContain("retry: 3000\n\n")
+        ->toContain("id: {$nil}\nevent: unread\ndata: {\"unread\":0}\n\n")
+        ->not->toContain('event: notification');
+
+    $student->notify(new PointsAdjusted(50, 'Bonus.', 50));
+    $first = $student->notifications()->firstOrFail()->id;
+
+    // A fresh connection does not replay history; it only reports the count, tagged with the cursor.
+    expect($stream($student))->toContain("id: {$first}\nevent: unread\ndata: {\"unread\":1}")
+        ->not->toContain('event: notification');
+
+    $student->notify(new PointsAdjusted(-10, 'Correction.', 40));
+    $other->notify(new PointsAdjusted(5, 'Not yours.', 5));
+    $second = $student->notifications()->where('id', '>', $first)->value('id');
+
+    // Reconnecting with the last seen id delivers only what arrived after it.
+    $content = $stream($student, ['Last-Event-ID' => $first]);
+    expect($content)->toContain("id: {$second}\nevent: notification\n")
+        ->toContain('Points adjusted: -10')
+        ->toContain('"unread":2')
+        ->not->toContain("id: {$first}")
+        ->not->toContain('Not yours.');
+
+    expect($stream($student, ['Last-Event-ID' => $nil]))->toContain('Points adjusted: +50')->toContain('Points adjusted: -10');
+
+    $content = $stream($student, ['Last-Event-ID' => 'not-a-uuid']);
+    expect($content)->not->toContain('event: notification');
 });

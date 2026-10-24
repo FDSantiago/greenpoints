@@ -26,4 +26,6 @@ COPY --chown=app:app . .
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# --no-reload is required for PHP_CLI_SERVER_WORKERS to take effect
+ENV PHP_CLI_SERVER_WORKERS=16
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--no-reload"]

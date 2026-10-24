@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { useApi } from '../hooks/useApi.js';
+import { useNotifications } from '../auth/NotificationsContext.jsx';
 import { Async, Chips, Empty, PageHead, Pager } from '../components/ui.jsx';
 import { dateTime } from '../lib/format.js';
 
@@ -13,6 +14,11 @@ export default function Alerts() {
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
   const state = useApi('/notifications', { status, page });
+  const { latest } = useNotifications();
+
+  // A new one arrived on the live stream: refetch so it shows up at the top.
+  const { reload } = state;
+  useEffect(() => { if (latest) reload(); }, [latest, reload]);
 
   async function open(n) {
     if (!n.read) await api(`/notifications/${n.id}/read`, { method: 'POST' });

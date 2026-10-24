@@ -141,6 +141,11 @@ tr:last-child td { border-bottom: 0; }
 .note.goal { background: linear-gradient(90deg, #f8efc9, #e9b82e); color: #3a2b00; }
 .note.read { opacity: .6; }
 .note b { display: block; }
+/* live notification pop-up (sits above the phone tab bar) */
+.toast { position: fixed; z-index: 30; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); width: auto; max-width: 420px; margin: 0 auto; color: inherit; box-shadow: 0 10px 30px rgba(20,35,26,.25); animation: toast-in .25s ease-out; }
+.toast.alert { color: #fff; }
+@media (min-width: 900px) { .toast { left: auto; right: 24px; bottom: 24px; } }
+@keyframes toast-in { from { transform: translateY(12px); opacity: 0; } }
 .pager { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 16px; font-weight: 700; }
 .empty { text-align: center; padding: 36px 16px; color: var(--muted); font-weight: 700; }
 .spin { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--green); border-radius: 50%; animation: s .8s linear infinite; margin: 40px auto; }

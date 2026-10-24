@@ -56,6 +56,7 @@ Route::prefix('v1')->group(function () {
 
         // Notifications (static paths first)
         Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::get('notifications/stream', [NotificationController::class, 'stream']);
         Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
         Route::get('notifications', [NotificationController::class, 'index']);
         Route::post('notifications/{notificationId}/read', [NotificationController::class, 'markRead'])->whereUuid('notificationId');
