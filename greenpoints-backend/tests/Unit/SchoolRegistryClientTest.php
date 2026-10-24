@@ -14,32 +14,8 @@ use Tests\TestCase;
 
 uses(TestCase::class);
 
-const FAKE_REGISTRY = 'http://registry.test';
-const FAKE_KEY = 'test-read-key';
-
-function registryStudent(array $overrides = []): array
-{
-    return $overrides + [
-        'student_id' => '2024-00309',
-        'first_name' => 'Ana Maria',
-        'last_name' => "O'Reilly",
-        'course' => 'BSIT',
-        'year_level' => 3,
-        'section' => 'IT3A',
-        'status' => 'Active',
-        'created_at' => '2026-10-24T23:46:31.758Z',
-        'updated_at' => '2026-10-24T23:46:31.758Z',
-    ];
-}
-
 beforeEach(function () {
-    config(['services.school_registry' => [
-        'enabled' => true,
-        'base_url' => FAKE_REGISTRY,
-        'read_key' => FAKE_KEY,
-        'timeout' => 3,
-        'retries' => 2,
-    ]]);
+    useFakeRegistry();
     Sleep::fake();
     Http::preventStrayRequests();
 });

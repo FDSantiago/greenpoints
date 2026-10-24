@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\StudentRegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,11 +15,14 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function register(RegisterRequest $request): JsonResponse
+    public function register(RegisterRequest $request, StudentRegistrationService $registration): JsonResponse
     {
         // Self-registration always creates a student: `role` is not mass-assignable.
+        // With the School Registry enabled, the student is verified there first (System 2).
         // refresh() loads the DB defaults (role = student, is_active = true) into the model.
-        $user = User::create($request->validated())->refresh();
+        $user = config('services.school_registry.enabled')
+            ? $registration->register($request->validated())->refresh()
+            : User::create($request->validated())->refresh();
 
         return response()->json([
             'token' => $user->createToken('api')->plainTextToken,
