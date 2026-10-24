@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    // School Registry (System 2): student lookup and section rosters over REST/JSON.
+    // `enabled` only switches the registration check; the client itself always works.
+    'school_registry' => [
+        'enabled' => (bool) env('SCHOOL_REGISTRY_ENABLED', false),
+        'base_url' => env('SCHOOL_REGISTRY_URL'),
+        'read_key' => env('SCHOOL_REGISTRY_KEY'),
+        'timeout' => (int) env('SCHOOL_REGISTRY_TIMEOUT', 3),   // seconds, per attempt
+        'retries' => (int) env('SCHOOL_REGISTRY_RETRIES', 2),   // extra attempts on connection errors / 5xx
+    ],
+
 ];
