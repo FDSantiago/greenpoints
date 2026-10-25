@@ -1,0 +1,12 @@
+# Keep secrets and local state out of the image (the Dockerfile does `COPY . .`).
+# Configuration comes from environment variables or a mounted .env at runtime.
+.env
+.env.*
+!.env.example
+
+# Local state that must not be baked in
+storage/logs/*
+storage/framework/sessions/*
+storage/framework/cache/data/*
+.phpunit.result.cache
+.git
