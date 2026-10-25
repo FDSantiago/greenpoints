@@ -1,0 +1,94 @@
+# System 1 (GreenPoints backend + its MySQL) and System 2 (School Registry + its MySQL), started together.
+# Expects the registry repo next to this project: ../../sia_school-registry (it is built, not changed).
+#
+#   export SCHOOL_REGISTRY_KEY=<registry read key>  REGISTRY_ADMIN_KEY=<registry admin key>
+#   docker compose -f docker-compose.integration.yml up --build
+#
+# GreenPoints: http://localhost:8001   School Registry: http://localhost:4001
+# The registry is re-seeded with its fictional data every time it starts.
+# The backend uses this folder's .env (APP_KEY etc.); the variables below override it.
+# Keys come from your shell, never from this file.
+name: greenpoints-integration
+
+services:
+  # ---- System 2: School Registry ---------------------------------------------------------
+  registry:
+    build: ../../sia_school-registry
+    command: ["sh", "-c", "bun src/db/seed.ts && exec bun src/index.ts"]
+    environment:
+      PORT: 4000
+      DATABASE_URL: mysql://registry:registry@registry-db:3306/school_registry?sslmode=require
+      REGISTRY_READ_KEY: ${SCHOOL_REGISTRY_KEY:?export SCHOOL_REGISTRY_KEY (the registry read key)}
+      REGISTRY_ADMIN_KEY: ${REGISTRY_ADMIN_KEY:?export REGISTRY_ADMIN_KEY (the registry admin key)}
+    ports:
+      - "4001:4000"
+    depends_on:
+      registry-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  registry-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: school_registry
+      MYSQL_USER: registry
+      MYSQL_PASSWORD: registry
+    volumes:
+      - registry-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---- System 1: GreenPoints backend ------------------------------------------------------
+  backend:
+    build: .
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    command: >
+      sh -c "composer install --no-interaction &&
+             php artisan migrate --force &&
+             php artisan serve --host=0.0.0.0 --port=8000 --no-reload"
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: greenpoints
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SCHOOL_REGISTRY_ENABLED: "true"
+      SCHOOL_REGISTRY_URL: http://registry:4000
+      SCHOOL_REGISTRY_KEY: ${SCHOOL_REGISTRY_KEY}
+      SCHOOL_REGISTRY_TIMEOUT: 3
+      SCHOOL_REGISTRY_RETRIES: 2
+    ports:
+      - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      registry:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: greenpoints
+    volumes:
+      - greenpoints-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  registry-data:
+  greenpoints-data:
