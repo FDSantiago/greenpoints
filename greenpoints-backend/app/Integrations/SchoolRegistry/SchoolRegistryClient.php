@@ -8,6 +8,7 @@ use App\Integrations\SchoolRegistry\Exceptions\RegistryUnavailable;
 use App\Integrations\SchoolRegistry\Exceptions\StudentNotFound;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
@@ -24,6 +25,8 @@ class SchoolRegistryClient
 {
     // The registry only echoes request ids in this format; anything else it replaces.
     private const REQUEST_ID_PATTERN = '/^[A-Za-z0-9._:-]{1,128}$/';
+
+    private const LAST_CALL_CACHE_KEY = 'school_registry.last_call';
 
     private string $baseUrl;
 
@@ -156,16 +159,25 @@ class SchoolRegistryClient
         Sleep::for(200 * $attempt)->milliseconds();
     }
 
-    // One line per outbound attempt. The API key is never logged.
+    /** The most recent outbound attempt (for the admin health endpoint), or null if none yet. */
+    public static function lastCall(): ?array
+    {
+        return Cache::get(self::LAST_CALL_CACHE_KEY);
+    }
+
+    // One line per outbound attempt, also remembered as the "last call". The API key is never logged.
     private function log(string $path, int|string $status, int $started, string $requestId, int $attempt): void
     {
-        Log::info('school_registry.call', [
+        $call = [
             'method' => 'GET',
             'path' => $path,
             'status' => $status,
             'ms' => (int) round((hrtime(true) - $started) / 1e6),
             'request_id' => $requestId,
             'attempt' => $attempt,
-        ]);
+        ];
+
+        Log::info('school_registry.call', $call);
+        Cache::forever(self::LAST_CALL_CACHE_KEY, $call + ['at' => now()->toIso8601String()]);
     }
 }

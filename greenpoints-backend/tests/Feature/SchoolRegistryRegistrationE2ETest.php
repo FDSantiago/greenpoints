@@ -83,3 +83,11 @@ it('E2E-12 syncs a real roster idempotently', function () {
     expect($second->json('data.totals.updated'))->toBe(0)
         ->and($second->json('data.totals.matched'))->toBe(1);
 });
+
+it('E2E-13 reports the real registry health to an admin', function () {
+    apiRequest($this, 'GET', '/admin/registry/health', userWithRole(User::ROLE_ADMIN))
+        ->assertOk()
+        ->assertJsonPath('data.registry.reachable', true)
+        ->assertJsonPath('data.registry.status', 'ok')
+        ->assertJsonPath('data.client.key_configured', true);
+});

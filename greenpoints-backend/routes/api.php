@@ -107,6 +107,7 @@ Route::prefix('v1')->group(function () {
             Route::get('reports/impact/export', [AdminImpactReportController::class, 'export']);
 
             // School Registry (System 2) integration
+            Route::get('registry/health', [AdminRegistryController::class, 'health']);
             Route::post('registry/sync', [AdminRegistryController::class, 'sync']);
         });
     });
