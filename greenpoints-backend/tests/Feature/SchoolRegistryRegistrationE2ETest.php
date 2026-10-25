@@ -8,6 +8,7 @@
  *   SCHOOL_REGISTRY_E2E=1 php artisan test --group=e2e
  */
 
+use App\Models\ClassGroup;
 use App\Models\User;
 
 pest()->group('e2e');
@@ -63,4 +64,22 @@ it('E2E-11 returns 503 when the registry rejects the key', function () {
         ->assertJsonPath('error.code', 'REGISTRY_UNAVAILABLE');
 
     expect(User::count())->toBe(0);
+});
+
+it('E2E-12 syncs a real roster idempotently', function () {
+    $group = ClassGroup::create(['name' => 'IT3A', 'type' => 'class']);
+    $user = User::factory()->create(['name' => 'Stale Name', 'group_id' => $group->id]);
+    $user->forceFill(['role' => User::ROLE_STUDENT, 'student_id' => '2024-00309'])->save();
+
+    $admin = userWithRole(User::ROLE_ADMIN);
+
+    $first = apiRequest($this, 'POST', '/admin/registry/sync', $admin, ['section' => 'IT3A'])->assertOk();
+    expect($first->json('data.totals.matched'))->toBe(1)
+        ->and($first->json('data.totals.updated'))->toBe(1)
+        ->and($first->json('data.totals.registry_students'))->toBeGreaterThan(1)
+        ->and($user->fresh()->name)->toBe("Ana Maria O'Reilly");
+
+    $second = apiRequest($this, 'POST', '/admin/registry/sync', $admin, ['section' => 'IT3A'])->assertOk();
+    expect($second->json('data.totals.updated'))->toBe(0)
+        ->and($second->json('data.totals.matched'))->toBe(1);
 });

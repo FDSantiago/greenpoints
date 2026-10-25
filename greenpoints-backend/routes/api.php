@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Admin\GroupController as AdminGroupController;
 use App\Http\Controllers\Api\V1\Admin\ImpactReportController as AdminImpactReportController;
+use App\Http\Controllers\Api\V1\Admin\RegistryController as AdminRegistryController;
 use App\Http\Controllers\Api\V1\Admin\RewardController as AdminRewardController;
 use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\V1\Admin\WasteCategoryController as AdminWasteCategoryController;
@@ -104,6 +105,9 @@ Route::prefix('v1')->group(function () {
             Route::post('reports/impact/generate', [AdminImpactReportController::class, 'generate']);
             Route::get('reports/impact/history', [AdminImpactReportController::class, 'history']);
             Route::get('reports/impact/export', [AdminImpactReportController::class, 'export']);
+
+            // School Registry (System 2) integration
+            Route::post('registry/sync', [AdminRegistryController::class, 'sync']);
         });
     });
 });
