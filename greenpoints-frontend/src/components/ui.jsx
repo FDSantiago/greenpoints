@@ -10,7 +10,7 @@ export function ErrorBox({ error, onRetry }) {
   if (!error) return null;
   return (
     <div className="alert">
-      {error.message || 'Something went wrong.'}
+      'Something went wrong.'
       {error.details?.length > 0 && <ul>{error.details.map((d) => <li key={d}>{d}</li>)}</ul>}
       {onRetry && <button className="btn sm" style={{ marginTop: 8 }} onClick={onRetry}>Try again</button>}
     </div>
