@@ -3,12 +3,12 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { ErrorBox, Field } from '../components/ui.jsx';
 
-// The API also accepts group_id, but there is no public endpoint that lists groups,
-// so new students start without a group and an admin assigns one (Admin > Users).
+// The student ID is checked against the School Registry (System 2): the backend takes the
+// student's name, course and class group (their section) from there.
 export default function Register() {
   const { user, register } = useAuth();
   const nav = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', password_confirmation: '' });
+  const [form, setForm] = useState({ student_id: '', name: '', email: '', password: '', password_confirmation: '' });
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -30,6 +30,7 @@ export default function Register() {
         <p className="muted">Recycle, earn points, redeem rewards.</p>
         <form onSubmit={submit}>
           <ErrorBox error={error} />
+          <Field label="Student ID" required placeholder="2026-00123" pattern="\d{4}-\d{5}" title="Format: 2026-00123" value={form.student_id} onChange={set('student_id')} />
           <Field label="Full name" required value={form.name} onChange={set('name')} />
           <Field label="Email" type="email" required value={form.email} onChange={set('email')} />
           <Field label="Password (8+ characters)" type="password" required minLength={8} value={form.password} onChange={set('password')} />

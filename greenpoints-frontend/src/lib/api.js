@@ -6,10 +6,12 @@ export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (t) => (t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY));
 
 // Laravel validation errors look like { message, errors: { field: ["msg"] } }.
+// School Registry failures (503) look like { error: { code: "REGISTRY_UNAVAILABLE", message } }.
 export class ApiError extends Error {
   constructor(status, body) {
-    super(body?.message || `Request failed (${status})`);
+    super(body?.message || body?.error?.message || `Request failed (${status})`);
     this.status = status;
+    this.code = body?.error?.code || null;
     this.errors = body?.errors || null;
   }
   // All field messages as one flat list, handy for showing under a form.
