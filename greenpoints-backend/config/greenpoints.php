@@ -20,4 +20,14 @@ return [
         ? (int) env('GREENPOINTS_DAILY_POINTS_CAP')
         : null,
 
+    /*
+    | Email verification for self-registered accounts. Until verified, a user can only reach
+    | /me, logout and the verification endpoints. The resend cooldown is enforced by the server.
+    */
+    'email_verification' => [
+        'code_ttl_minutes' => (int) env('EMAIL_VERIFICATION_CODE_TTL', 15),
+        'resend_cooldown_seconds' => (int) env('EMAIL_VERIFICATION_RESEND_COOLDOWN', 60),
+        'max_attempts' => (int) env('EMAIL_VERIFICATION_MAX_ATTEMPTS', 5),
+    ],
+
 ];

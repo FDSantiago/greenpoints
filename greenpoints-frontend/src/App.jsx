@@ -3,6 +3,7 @@ import RequireAuth from './auth/RequireAuth.jsx';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import VerifyEmail from './pages/VerifyEmail.jsx';
 import Home from './pages/Home.jsx';
 import DropOff from './pages/DropOff.jsx';
 import History from './pages/History.jsx';
@@ -26,6 +27,8 @@ export default function App() {
       {/* public */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      {/* signed in, email not verified yet */}
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
       {/* any signed-in user */}
       <Route element={<RequireAuth />}>

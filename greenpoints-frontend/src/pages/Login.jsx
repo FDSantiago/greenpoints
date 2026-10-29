@@ -3,7 +3,8 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { ErrorBox, Field } from '../components/ui.jsx';
 
-export const homeFor = (u) => (u.role === 'admin' ? '/admin' : u.role === 'staff' ? '/staff/review' : '/');
+export const homeFor = (u) =>
+  !u.email_verified ? '/verify-email' : u.role === 'admin' ? '/admin' : u.role === 'staff' ? '/staff/review' : '/';
 
 export default function Login() {
   const { user, login } = useAuth();
@@ -20,7 +21,7 @@ export default function Login() {
     setBusy(true); setError(null);
     try {
       const u = await login(form.email, form.password);
-      nav(from || homeFor(u), { replace: true });
+      nav(u.email_verified ? from || homeFor(u) : homeFor(u), { replace: true });
     } catch (err) { setError(err); } finally { setBusy(false); }
   }
 

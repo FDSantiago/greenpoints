@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { ErrorBox, Field } from '../components/ui.jsx';
+import { homeFor } from './Login.jsx';
 
 // The student ID is checked against the School Registry (System 2): the backend takes the
 // student's name, course and class group (their section) from there.
@@ -13,12 +14,13 @@ export default function Register() {
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={homeFor(user)} replace />;
 
+  // A new account is signed in straight away but must enter the emailed code first.
   async function submit(e) {
     e.preventDefault();
     setBusy(true); setError(null);
-    try { await register(form); nav('/', { replace: true }); }
+    try { const u = await register(form); nav(homeFor(u), { replace: true }); }
     catch (err) { setError(err); } finally { setBusy(false); }
   }
 
