@@ -38,5 +38,6 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
-  return <AuthCtx.Provider value={{ user, ready, login, register, logout }}>{children}</AuthCtx.Provider>;
+  // setUser lets the verification screen swap in the verified user without a reload.
+  return <AuthCtx.Provider value={{ user, ready, login, register, logout, setUser }}>{children}</AuthCtx.Provider>;
 }

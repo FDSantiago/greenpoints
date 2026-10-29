@@ -13,6 +13,7 @@ export class ApiError extends Error {
     this.status = status;
     this.code = body?.error?.code || null;
     this.errors = body?.errors || null;
+    this.retryAfter = body?.error?.details?.retry_after ?? null; // 429 RESEND_COOLDOWN
   }
   // All field messages as one flat list, handy for showing under a form.
   get details() {

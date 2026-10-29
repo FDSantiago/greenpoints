@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\VerificationMailFailed;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\EmailVerificationService;
 use App\Services\StudentRegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,14 +17,26 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function register(RegisterRequest $request, StudentRegistrationService $registration): JsonResponse
-    {
+    public function register(
+        RegisterRequest $request,
+        StudentRegistrationService $registration,
+        EmailVerificationService $verification,
+    ): JsonResponse {
         // Self-registration always creates a student: `role` is not mass-assignable.
         // With the School Registry enabled, the student is verified there first (System 2).
         // refresh() loads the DB defaults (role = student, is_active = true) into the model.
         $user = config('services.school_registry.enabled')
             ? $registration->register($request->validated())->refresh()
             : User::create($request->validated())->refresh();
+
+        // The new account starts unverified and is logged in, but can only reach the
+        // verification endpoints until the emailed code is entered. If the mail server is
+        // down the account still exists: the user can press "resend" on the verification screen.
+        try {
+            $verification->send($user);
+        } catch (VerificationMailFailed $e) {
+            report($e);
+        }
 
         return response()->json([
             'token' => $user->createToken('api')->plainTextToken,
